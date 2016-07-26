@@ -1,0 +1,135 @@
+You need to use the below jars for reading from an excel file. 
+poi-3.7-20101029.jar
+poi-ooxml-3.7-20101029.jar
+poi-ooxml-schemas-3.7-20101029.jar
+xmlbeans-2.3.0.jar
+dom4j-1.6.1.jar
+I am using Apache POI 3.7 but you can download the latest jars from downloads page of Apache POI(http://poi.apache.org/download.html). Make sure you have added all the above jars to your project build path.
+An example excel file(either .xslx or .xls formats) is given below:
+-------------------------------------------------------------------------------------------------------------------
+package datadrivenexcel;
+ 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+ 
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+public class DataDrivenExcel {
+ 
+ private Workbook wb;
+ private Sheet ws;
+ 
+ /**
+  * Opens a excel sheet
+  * 
+  * @param fileName
+  *            name of the file where you want data
+  * @param sheetName
+  *            name of the sheet in the excel file
+  */
+ public DataDrivenExcel(String fileName, String sheetName) {
+  try {
+   if (fileName.indexOf("xlsx") < 0) { //for .xls format
+    wb = new HSSFWorkbook(new FileInputStream(new File(fileName)));
+    ws = wb.getSheet(sheetName);
+   } else { //for .xlsx format
+    wb = new XSSFWorkbook(fileName);
+    ws = (XSSFSheet) wb.getSheet(sheetName);
+   }
+  } catch (IOException io) {
+   System.err.println("Invalid file '" + fileName
+     + "' or incorrect sheet '" + sheetName
+     + "', enter a valid one");
+  }
+ }
+ 
+ /**
+  * Gets a cell value from the opened sheet
+  * 
+  * @param rowIndex
+  *            starting with 0 index
+  * @param columnIndex
+  *            starting with 0 index
+  * @return
+  */
+ public String getCell(int rowIndex, int columnIndex) {
+  org.apache.poi.ss.usermodel.Cell cell = null;
+  try {
+    cell = ws.getRow(rowIndex).getCell(columnIndex);
+  } catch (Exception e) {
+   System.err.println("The cell with row '" + rowIndex + "' and column '"
+     + columnIndex + "' doesn't exist in the sheet");
+  }
+  return new DataFormatter().formatCellValue(cell);
+ }
+}
+----------------------------------------------------------------------------------
+package datadrivenexcel;
+
+
+import java.util.ArrayList;
+
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+
+
+public class DataDrivenTest {
+	@DataProvider(name = "loginToAppWithAllRoles")
+	 public Object[][] getLoginDataForAllRoles() throws Exception {
+	 
+	  DataDrivenExcel userData = new DataDrivenExcel(
+	    "E:\\SampleExcel.xlsx", "Sheet1");
+	 
+	  ArrayList<Object> dataList = new ArrayList<Object>();
+	 
+	  int i = 1;// excluding header row
+	  int totalRows = 6;
+	  while (i < totalRows) {
+	   System.out.println("loginToAppWithAllRoles : line : " + i);
+	   
+	   Object[] dataLine = new Object[4];
+	   dataLine[0] = userData.getCell(i, 0);
+	   dataLine[1] = userData.getCell(i, 1);
+	   dataLine[2] = userData.getCell(i, 2);
+	   dataLine[3] = userData.getCell(i, 3);
+	 
+	   dataList.add(dataLine);
+	 
+	   i++;
+	  }
+	  
+	  Object[][] data = new Object[dataList.size()][];
+	  for (i = 0; i < dataList.size(); i++)
+	   data[i] = (Object[]) dataList.get(i);
+	 
+	  return data;
+	 }
+	
+	 @Test(dataProvider = "loginToAppWithAllRoles", 
+	       description = "Login with different roles")
+	 public void testLogin(String userID, String username, String password,
+	   String role) {
+	 
+	  WebDriver driver = new FirefoxDriver();
+	 
+	  driver.get("http://yoursiteurl.com");
+	 
+	  // Do required actions using the input data, i am just printing here
+	  System.out.println("userID:" + userID);
+	  System.out.println("username:" + username);
+	  System.out.println("password:" + password);
+	  System.out.println("role:" + role);
+	 
+	  driver.quit();
+	 }
+	
+
+}
